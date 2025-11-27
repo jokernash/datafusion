@@ -43,13 +43,11 @@ jobs:
             const prNumber = context.payload.inputs.pr_number;
             const branch = `pr-${prNumber}`;
 
-            const { data: pr } = await github.rest.pulls.create({
+            await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `CodeRabbit review: upstream PR #${prNumber}`,
+              title: `CodeRabbit review for upstream PR ${prNumber}`,
               head: branch,
               base: 'main',
-              body: `Shadow PR to run CodeRabbit on upstream PR https://github.com/apache/datafusion/pull/${prNumber}`
+              body: `Shadow PR to run CodeRabbit on an upstream DataFusion pull request (ID ${prNumber}).`
             });
-
-            core.info(`Created PR #${pr.number} in fork`);
