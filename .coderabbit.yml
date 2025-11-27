@@ -1,0 +1,18 @@
+version: 1
+
+review:
+  auto_review: true          # auto-review new PRs
+  auto_summarize: true
+  allow_bot_pr: true         # 👈 allow PRs opened by github-actions[bot]
+  max_review_comments: 60
+
+commands:
+  - "@coderabbitai review"
+  - "@coderabbitai summary"
+  - "@coderabbitai explain"
+
+rules:
+  # Optional: treat mirrored PRs differently by branch prefix
+  - branch: "pr-*"
+    review:
+      depth: high            # deeper review for upstream-mirrored PRs
