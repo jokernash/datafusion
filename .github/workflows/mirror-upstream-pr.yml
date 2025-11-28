@@ -8,6 +8,11 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write        # allow pushing branches
+  pull-requests: write   # allow creating PRs
+  workflows: write       # 👈 allow updating .github/workflows/* via this token
+
 jobs:
   mirror:
     runs-on: ubuntu-latest
@@ -32,7 +37,7 @@ jobs:
       - name: Fast-forward main to upstream/main
         run: |
           git checkout main
-          # If you only use this fork for reviews, hard reset is perfectly fine:
+          # For a review-only fork, a hard reset keeps things clean.
           git reset --hard upstream/main
           git push origin main --force
 
