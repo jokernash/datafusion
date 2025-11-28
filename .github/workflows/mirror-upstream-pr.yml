@@ -13,20 +13,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout fork
+      - name: Checkout fork (main)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
 
       - name: Configure Git user
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Add upstream remote
+      - name: Add upstream remote and fetch
         run: |
           git remote add upstream https://github.com/apache/datafusion.git
           git fetch upstream
+
+      - name: Fast-forward main to upstream/main
+        run: |
+          git checkout main
+          # If you only use this fork for reviews, hard reset is perfectly fine:
+          git reset --hard upstream/main
+          git push origin main --force
 
       - name: Fetch upstream PR into branch
         run: |
