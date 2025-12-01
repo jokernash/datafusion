@@ -28,11 +28,21 @@ jobs:
           git remote add upstream https://github.com/apache/datafusion.git
           git fetch upstream
 
-      - name: Fetch upstream PR into branch
+      - name: Fetch upstream PR into branch and scrub commit messages
         run: |
           BRANCH="pr-${{ inputs.pr_number }}"
+          # 1. Fetch PR into local branch
           git fetch upstream pull/${{ inputs.pr_number }}/head:${BRANCH}
           git checkout ${BRANCH}
+
+          # 2. Rewrite commit messages to avoid apache#NNNN cross-references
+          #    (only on this branch, safe for review-only use)
+          git filter-branch --msg-filter '
+            # replace "apache#1234" or "apache/datafusion#1234" with plain text
+            sed -E "s/apache\/?datafusion#([0-9]+)/apache datafusion issue \1/g; s/apache#([0-9]+)/apache issue \1/g"
+          ' ${BRANCH} || true
+
+          # 3. Push the rewritten branch to your fork
           git push origin ${BRANCH} --force
 
       - name: Create PR in fork and trigger CodeRabbit
