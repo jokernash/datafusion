@@ -8,47 +8,56 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   mirror:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout fork
+      - name: Checkout fork main with PAT
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
+          token: ${{ secrets.MIRROR_PAT }}   # use your PAT here
 
       - name: Configure Git user
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "jokernash"
+          git config user.email "jokernash@users.noreply.github.com"
 
       - name: Add upstream remote
         run: |
           git remote add upstream https://github.com/apache/datafusion.git
           git fetch upstream
 
+      - name: Use PAT for pushing to origin
+        run: |
+          git remote set-url origin "https://x-access-token:${{ secrets.MIRROR_PAT }}@github.com/${GITHUB_REPOSITORY}.git"
+
       - name: Fetch upstream PR into branch and scrub commit messages
         run: |
           BRANCH="pr-${{ inputs.pr_number }}"
-          # 1. Fetch PR into local branch
+
+          # 1. Fetch upstream PR head into a local branch
           git fetch upstream pull/${{ inputs.pr_number }}/head:${BRANCH}
           git checkout ${BRANCH}
 
-          # 2. Rewrite commit messages to avoid apache#NNNN cross-references
-          #    (only on this branch, safe for review-only use)
+          # 2. Scrub commit messages to avoid cross-repo refs like apache#1234 or apache/datafusion#1234
           git filter-branch --msg-filter '
-            # replace "apache#1234" or "apache/datafusion#1234" with plain text
             sed -E "s/apache\/?datafusion#([0-9]+)/apache datafusion issue \1/g; s/apache#([0-9]+)/apache issue \1/g"
           ' ${BRANCH} || true
 
-          # 3. Push the rewritten branch to your fork
+          # 3. Push rewritten branch to your fork
           git push origin ${BRANCH} --force
 
       - name: Create PR in fork and trigger CodeRabbit
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.MIRROR_PAT }}   # PR is authored by you
           script: |
             const prNumber = context.payload.inputs.pr_number;
             const branch = `pr-${prNumber}`;
@@ -63,7 +72,7 @@ jobs:
               body: `Shadow PR to run CodeRabbit on an upstream DataFusion pull request (ID ${prNumber}).`
             });
 
-            // 2) Immediately ask CodeRabbit to review it
+            // 2) Ask CodeRabbit to review it
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -71,4 +80,4 @@ jobs:
               body: '@coderabbitai review'
             });
 
-            core.info(`Created PR #${pr.number} and triggered CodeRabbit review.`);
+            console.log(`Created PR #${pr.number} in fork and triggered CodeRabbit review.`);
